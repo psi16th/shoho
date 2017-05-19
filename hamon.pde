@@ -5,27 +5,41 @@
 import SimpleOpenNI.*;
 SimpleOpenNI  context;
 
+import java.awt.*;
 
-//float zoomF = 0.5f;
+
+float zoomF = 0.5f;
 float rotX = radians(180);
 float rotY = radians(0);
 
 PImage img;
 Ripple ripple;
 
+void init() {
+  frame.removeNotify();
+  frame.setUndecorated(true);
+  frame.addNotify();
+  super.init();  
+}
+
 void setup() {
   context = new SimpleOpenNI(this);
   context.enableDepth();
   context.enableUser();
   
-  img = loadImage("data/rainbow.jpg");
-  size(img.width, img.height, P3D);
-  perspective(radians(45),
+  img = loadImage("data/rainbow.jpeg");
+  img.resize(displayWidth, displayHeight);
+//  img.resize(1920, 1080);
+//  size(img.width, img.height, P3D);
+  size(displayWidth, displayHeight, P3D);
+  frame.setLocation(0,0);
+  
+  perspective(radians(30),
                 float(width)/float(height),
                 10,150000);
   background(0);
   ripple = new Ripple();
-  frameRate(100);
+  frameRate(120);
 }
 
 void draw() {
@@ -35,6 +49,15 @@ void draw() {
   for (int loc = 0; loc < width * height; loc++) {
     pixels[loc] = ripple.col[loc];
   }
+  
+  short ripplemap[];
+  ripplemap = ripple.ripplemap;
+  int sum = 0;
+  for(int i=0;i<ripplemap.length;i++){
+    sum += abs(int(ripplemap[i]));
+  }
+  sum /= (width*height);
+//  println((int)((random(sum)/53)*255));
   updatePixels();
   ripple.newframe();
   
@@ -43,16 +66,11 @@ void draw() {
   rotateX(rotX);
   rotateY(rotY);
   scale(-1,1);
-//  scale(zoomF);
-  stroke(255);
-  strokeWeight(2);
-  line(-width/2, 0, width/2, 0);
-  line(0, -height/2, 0, height/2);
-  
+  scale(zoomF);
   
   int[]   depthMap = context.depthMap();
   int[]   userMap = context.userMap();
-  int     steps   = 3;  // to speed up the drawing, draw every third point
+  int     steps   = 2;  // to speed up the drawing, draw every third point
   int     index;
   PVector realWorldPoint;
  
@@ -60,6 +78,7 @@ void draw() {
 
   // draw the pointcloud
   beginShape(POINTS);
+//  stroke((int)((random(sum)/53)*255), 0, 0);
   for(int y=0;y < context.depthHeight();y+=steps){
     for(int x=0;x < context.depthWidth();x+=steps)
     {
@@ -69,8 +88,20 @@ void draw() {
         // draw the projected point
         realWorldPoint = context.depthMapRealWorld()[index];
         if(userMap[index] != 0) {
-          stroke(255, 255, 255);       
-          point(realWorldPoint.x,realWorldPoint.y,realWorldPoint.z);
+//          colorMode(HSB, 100);
+//            stroke(255, 255, 255);
+//          if (random(52)<sum){
+//            stroke(255-(int)((random(sum)/53)*255), 0, 0);
+////            stroke(255-(int)((random(sum)/53)*255), 255-(int)((random(sum)/53)*255), 255-(int)((random(sum)/53)*255)); 
+//          }else{
+//            stroke(255, 255, 255);
+//          }
+          
+          stroke(255, 255, 255);
+          strokeWeight(2);
+//          stroke(255-(int)((random(sum)/53)*255), 0, 0); 
+//          ellipse(width/2, height/2, 150, 150);     
+          vertex(realWorldPoint.x,realWorldPoint.y,realWorldPoint.z);
         }
       }
     } 
@@ -83,9 +114,9 @@ void draw() {
       PVector left = new PVector();
       PVector right = new PVector();
       context.getJointPositionSkeleton(userList[i], SimpleOpenNI.SKEL_LEFT_HAND, left);
-//      context.getJointPositionSkeleton(userList[i], SimpleOpenNI.SKEL_RIGHT_HAND, right);
+      context.getJointPositionSkeleton(userList[i], SimpleOpenNI.SKEL_RIGHT_HAND, right);
       disturbrip(int(-left.x/2+width/2), int(-left.y/2+height/2));
-//      disturbrip(int(-right.x/2+width/2), int(-right.y/2+height/2));
+      disturbrip(int(-right.x/2+width/2), int(-right.y/2+height/2));
     }
     
   }
@@ -103,7 +134,7 @@ class Ripple {
 
   Ripple() {
     // constructor
-    riprad = 3;
+    riprad = 4;
     rwidth = width >> 1;
     rheight = height >> 1;
     ssize = width * (height + 2) * 2;
@@ -129,7 +160,7 @@ class Ripple {
         short data = (short)((ripplemap[mapind - width] + ripplemap[mapind + width] + 
           ripplemap[mapind - 1] + ripplemap[mapind + 1]) >> 1);
         data -= ripplemap[newind + i];
-        data -= data >> 5;
+        data -= data >> 6;
         if (x == 0 || y == 0) // avoid the wraparound effect
           ripplemap[newind + i] = 0;
         else
@@ -173,3 +204,24 @@ void disturbrip(int x, int y){
     }
   }
 }
+
+void keyPressed(){
+  if (key=='f'){
+    img = loadImage("data/fire.jpeg");
+  }else if (key=='s'){
+    img = loadImage("data/space.jpeg");
+  }else if (key=='r'){
+    img = loadImage("data/rainbow.jpeg");
+  }
+  img.resize(displayWidth, displayHeight);
+}
+
+//void mouseDragged(){
+//  for (int j = mouseY - ripple.riprad; j < mouseY + ripple.riprad; j++) {
+//    for (int k = mouseX - ripple.riprad; k < mouseX + ripple.riprad; k++) {
+//      if (j >= 0 && j < height && k>= 0 && k < width) {
+//        ripple.ripplemap[ripple.oldind + (j * width) + k] += 512;
+//      }
+//    }
+//  }
+//}
